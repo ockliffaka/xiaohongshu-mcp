@@ -1,37 +1,60 @@
+// xiaohongshu-mcp is an MCP (Model Context Protocol) server
+// that provides tools for interacting with Xiaohongshu (Little Red Book) content.
 package main
 
 import (
-	"flag"
+	"context"
+	"fmt"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/sirupsen/logrus"
-	"github.com/xpzouying/xiaohongshu-mcp/configs"
+	"github.com/xpzouying/xiaohongshu-mcp/internal/server"
+)
+
+const (
+	// defaultPort is the default port for the MCP server
+	defaultPort = "8080"
 )
 
 func main() {
-	var (
-		headless bool
-		binPath  string // 浏览器二进制文件路径
-		port     string
-	)
-	flag.BoolVar(&headless, "headless", true, "是否无头模式")
-	flag.StringVar(&binPath, "bin", "", "浏览器二进制文件路径")
-	flag.StringVar(&port, "port", ":18060", "端口")
-	flag.Parse()
+	// Set up structured logging
+	logger := log.New(os.Stdout, "[xiaohongshu-mcp] ", log.LstdFlags|log.Lshortfile)
 
-	if len(binPath) == 0 {
-		binPath = os.Getenv("ROD_BROWSER_BIN")
+	// Read configuration from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = defaultPort
 	}
 
-	configs.InitHeadless(headless)
-	configs.SetBinPath(binPath)
+	// Create a context that is cancelled on interrupt signals
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// 初始化服务
-	xiaohongshuService := NewXiaohongshuService()
+	// Handle graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		logger.Printf("Received signal: %v, shutting down...", sig)
+		cancel()
+	}()
 
-	// 创建并启动应用服务器
-	appServer := NewAppServer(xiaohongshuService)
-	if err := appServer.Start(port); err != nil {
-		logrus.Fatalf("failed to run server: %v", err)
+	// Initialize and start the MCP server
+	srv, err := server.New(server.Config{
+		Port:   port,
+		Logger: logger,
+	})
+	if err != nil {
+		logger.Fatalf("Failed to create server: %v", err)
 	}
+
+	logger.Printf("Starting xiaohongshu-mcp server on port %s", port)
+	if err := srv.Run(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
+		os.Exit(1)
+	}
+
+	logger.Println("Server stopped gracefully")
 }
