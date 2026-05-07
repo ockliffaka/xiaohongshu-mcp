@@ -15,8 +15,8 @@ import (
 
 const (
 	// defaultPort is the default port for the MCP server
-	// Changed from 8080 to 9090 to avoid conflicts with other local services
-	defaultPort = "9090"
+	// Changed from 9090 to 8888 for my local dev setup
+	defaultPort = "8888"
 )
 
 func main() {
