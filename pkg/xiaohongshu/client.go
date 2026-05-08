@@ -23,7 +23,8 @@ const (
 	DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 	// DefaultPageSize is the default number of results per search page.
-	DefaultPageSize = 20
+	// Reduced from 20 to 10 to keep responses manageable for personal use.
+	DefaultPageSize = 10
 )
 
 // Client is the Xiaohongshu HTTP client.
@@ -114,9 +115,4 @@ func NewClient(opts ...ClientOption) *Client {
 func (c *Client) SearchNotes(ctx context.Context, keyword string, page int) (*SearchResult, error) {
 	params := url.Values{}
 	params.Set("keyword", keyword)
-	params.Set("page", fmt.Sprintf("%d", page))
-	params.Set("page_size", fmt.Sprintf("%d", DefaultPageSize))
-
-	reqURL := fmt.Sprintf("%s/api/sns/web/v1/search/notes?%s", c.baseURL, params.Encode())
-
-	res
+	params.Set
