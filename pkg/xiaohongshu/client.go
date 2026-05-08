@@ -16,10 +16,14 @@ const (
 	DefaultBaseURL = "https://www.xiaohongshu.com"
 
 	// DefaultTimeout is the default HTTP client timeout.
-	DefaultTimeout = 30 * time.Second
+	// Increased from 30s to 45s since the API can be slow at times.
+	DefaultTimeout = 45 * time.Second
 
 	// DefaultUserAgent mimics a browser to avoid being blocked.
 	DefaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+	// DefaultPageSize is the default number of results per search page.
+	DefaultPageSize = 20
 )
 
 // Client is the Xiaohongshu HTTP client.
@@ -111,55 +115,8 @@ func (c *Client) SearchNotes(ctx context.Context, keyword string, page int) (*Se
 	params := url.Values{}
 	params.Set("keyword", keyword)
 	params.Set("page", fmt.Sprintf("%d", page))
-	params.Set("page_size", "20")
+	params.Set("page_size", fmt.Sprintf("%d", DefaultPageSize))
 
 	reqURL := fmt.Sprintf("%s/api/sns/web/v1/search/notes?%s", c.baseURL, params.Encode())
 
-	resp, err := c.doRequest(ctx, http.MethodGet, reqURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("search notes request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var result SearchResult
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal search result: %w", err)
-	}
-
-	return &result, nil
-}
-
-// doRequest performs an HTTP request with the client's default headers and cookies.
-func (c *Client) doRequest(ctx context.Context, method, reqURL string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("User-Agent", c.userAgent)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-	req.Header.Set("Referer", c.baseURL)
-	req.Header.Set("Origin", c.baseURL)
-
-	for _, cookie := range c.cookies {
-		req.AddCookie(cookie)
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	return resp, nil
-}
+	res
