@@ -22,7 +22,8 @@ const (
 func main() {
 	// Set up structured logging
 	// Using log.Lmicroseconds instead of log.LstdFlags for more precise timestamps
-	logger := log.New(os.Stdout, "[xiaohongshu-mcp] ", log.Lmicroseconds|log.Lshortfile)
+	// Also added log.Ldate so we can see the full date in long-running sessions
+	logger := log.New(os.Stdout, "[xiaohongshu-mcp] ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 	// Read configuration from environment
 	port := os.Getenv("PORT")
